@@ -1,0 +1,27 @@
+# Ignore local environment files
+*.env
+*.env.*
+
+# Ignore editor/OS files
+*.swp
+*.swo
+.DS_Store
+
+# Ignore build artifacts
+*.log
+*.tmp
+*.bak
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Node/npm
+node_modules/
+# 🔒 Secrets
+*.env
+*.env.*
+*.yaml.secret
+k3s-jenkins.yaml
+
