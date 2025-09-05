@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{NEWS_APP_NAME}}
+  namespace: {{NAMESPACE}}
+spec:
+  type: ClusterIP
+  selector:
+    app: {{NEWS_APP_NAME}}
+  ports:
+    - name: http
+      port: 80
+      targetPort: {{NEWS_CONTAINER_PORT}}
+

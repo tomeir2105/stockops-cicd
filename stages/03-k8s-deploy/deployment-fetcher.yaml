@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{FETCHER_APP_NAME}}
+  namespace: {{NAMESPACE}}
+spec:
+  replicas: {{FETCHER_REPLICAS}}
+  selector:
+    matchLabels:
+      app: {{FETCHER_APP_NAME}}
+  template:
+    metadata:
+      labels:
+        app: {{FETCHER_APP_NAME}}
+    spec:
+      containers:
+        - name: {{FETCHER_APP_NAME}}
+          image: {{FETCHER_IMAGE}}:{{FETCHER_TAG}}
+          imagePullPolicy: Always
+          ports:
+            - containerPort: {{FETCHER_CONTAINER_PORT}}
+

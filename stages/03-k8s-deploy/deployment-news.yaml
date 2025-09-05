@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{NEWS_APP_NAME}}
+  namespace: {{NAMESPACE}}
+spec:
+  replicas: {{NEWS_REPLICAS}}
+  selector:
+    matchLabels:
+      app: {{NEWS_APP_NAME}}
+  template:
+    metadata:
+      labels:
+        app: {{NEWS_APP_NAME}}
+    spec:
+      containers:
+        - name: {{NEWS_APP_NAME}}
+          image: {{NEWS_IMAGE}}:{{NEWS_TAG}}
+          imagePullPolicy: Always
+          ports:
+            - containerPort: {{NEWS_CONTAINER_PORT}}
+

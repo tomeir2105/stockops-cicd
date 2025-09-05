@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-datasources
+  namespace: {{NAMESPACE}}
+  labels:
+    grafana_datasource: "1"
+data:
+  influxdb.yaml: |
+    apiVersion: 1
+    datasources:
+      - name: InfluxDB
+        type: influxdb
+        access: proxy
+        url: http://influxdb.{{NAMESPACE}}.svc.cluster.local:8086
+        isDefault: true
+        jsonData:
+          version: Flux
+          organization: {{INFLUXDB_ORG}}
+          defaultBucket: {{INFLUXDB_BUCKET}}
+        secureJsonData:
+          token: ${INFLUXDB_TOKEN}
+
