@@ -2,6 +2,12 @@
 set -euo pipefail
 
 # ------------ Config ------------
+# Load local parameters if set_params.sh exists
+if [[ -f "$(dirname "$0")/secret_params.sh" ]]; then
+  # shellcheck disable=SC1091
+  source "$(dirname "$0")/secret_params.sh"
+fi
+
 K3S_HOST="${K3S_HOST:-user@192.168.56.102}"
 K3S_IP="${K3S_IP:-192.168.56.102}"
 KUBECONFIG_FILE="${KUBECONFIG_FILE:-$(pwd)/k3s-jenkins.yaml}"
@@ -166,7 +172,19 @@ NAMESPACE="${NAMESPACE}" bash "$STAGE03B/run.sh"
 
 ssh ${SSH_OPTS} "${K3S_HOST}" "printf '%s\n' '${K3S_SUDO_PASS}' | sudo -S ufw status | grep -q inactive || printf '%s\n' '${K3S_SUDO_PASS}' | sudo -S ufw allow ${GRAFANA_NODEPORT}/tcp || true"
 
-# ------------ 7) Verify ------------
+# ------------ 7) Provision Grafana dashboards ------------
+log "Provisioning Grafana dashboards"
+[[ -f "$STAGE03/grafana-provisioning-dashboards.yaml" ]] || die "Missing $STAGE03/grafana-provisioning-dashboards.yaml"
+[[ -f "$STAGE03/grafana-dashboards.yaml" ]] || die "Missing $STAGE03/grafana-dashboards.yaml"
+
+kubectl -n "${NAMESPACE}" apply -f "$STAGE03/grafana-provisioning-dashboards.yaml"
+kubectl -n "${NAMESPACE}" apply -f "$STAGE03/grafana-dashboards.yaml"
+
+log "Restarting Grafana to load dashboards"
+kubectl -n "${NAMESPACE}" rollout restart deploy/grafana
+kubectl -n "${NAMESPACE}" rollout status deploy/grafana --timeout=180s || true
+
+# ------------ 8) Verify ------------
 kubectl -n "${NAMESPACE}" rollout status deploy/influxdb --timeout=180s || true
 kubectl -n "${NAMESPACE}" rollout status deploy/grafana  --timeout=180s || true
 kubectl -n "${NAMESPACE}" rollout status deploy/stockops-fetcher --timeout=180s || true

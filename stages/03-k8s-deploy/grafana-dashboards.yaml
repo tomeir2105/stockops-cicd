@@ -1,0 +1,111 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboards
+  namespace: {NAMESPACE}
+data:
+  stockops-prices.json: |
+    {
+      "annotations": {
+        "list": []
+      },
+      "editable": true,
+      "fiscalYearStartMonth": 1,
+      "graphTooltip": 0,
+      "panels": [
+        {
+          "type": "timeseries",
+          "title": "Price (example)",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb"
+          },
+          "targets": [
+            {
+              "query": "from(bucket: \"lse\") |> range(start: -24h) |> filter(fn: (r) => r._measurement == \"price\")",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {},
+            "overrides": []
+          },
+          "options": {},
+          "gridPos": {
+            "h": 10,
+            "w": 24,
+            "x": 0,
+            "y": 0
+          }
+        }
+      ],
+      "schemaVersion": 38,
+      "tags": [
+        "stockops",
+        "example"
+      ],
+      "templating": {
+        "list": []
+      },
+      "time": {
+        "from": "now-24h",
+        "to": "now"
+      },
+      "timepicker": {},
+      "title": "StockOps \u2022 Prices (Example)",
+      "uid": "stockops-prices-example",
+      "version": 1
+    }
+  stockops-news.json: |
+    {
+      "annotations": {
+        "list": []
+      },
+      "editable": true,
+      "fiscalYearStartMonth": 1,
+      "graphTooltip": 0,
+      "panels": [
+        {
+          "type": "table",
+          "title": "News (example)",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb"
+          },
+          "targets": [
+            {
+              "query": "from(bucket: \"lse\") |> range(start: -7d) |> filter(fn: (r) => r._measurement == \"news\") |> keep(columns: [\"_time\",\"title\",\"ticker\",\"source\"])",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {},
+            "overrides": []
+          },
+          "options": {},
+          "gridPos": {
+            "h": 12,
+            "w": 24,
+            "x": 0,
+            "y": 0
+          }
+        }
+      ],
+      "schemaVersion": 38,
+      "tags": [
+        "stockops",
+        "example"
+      ],
+      "templating": {
+        "list": []
+      },
+      "time": {
+        "from": "now-7d",
+        "to": "now"
+      },
+      "timepicker": {},
+      "title": "StockOps \u2022 News (Example)",
+      "uid": "stockops-news-example",
+      "version": 1
+    }
+

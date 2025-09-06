@@ -1,3 +1,4 @@
+secret_params.sh
 # 🔒 Secrets and kubeconfig
 k3s-jenkins.yaml
 *.env

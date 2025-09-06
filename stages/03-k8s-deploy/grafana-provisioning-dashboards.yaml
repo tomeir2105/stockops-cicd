@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-provisioning-dashboards
+  namespace: {{NAMESPACE}}
+data:
+  dashboards.yml: |
+    apiVersion: 1
+    providers:
+      - name: 'stockops-dashboards'
+        disabled: false
+        type: file
+        allowUiUpdates: true
+        updateIntervalSeconds: 30
+        options:
+          path: /var/lib/grafana/dashboards
+          foldersFromFilesStructure: true
+
