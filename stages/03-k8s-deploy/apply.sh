@@ -79,6 +79,12 @@ KUBECONFIG="$KUBECONFIG_FILE" kubectl apply -f <(render_globals < "$DIR/grafana-
         -e "s/{{GRAFANA_ADMIN_PASSWORD}}/$GRAFANA_ADMIN_PASSWORD/g" )
 KUBECONFIG="$KUBECONFIG_FILE" kubectl apply -f <(render_globals < "$DIR/grafana-datasource.yaml"   \
   | sed -e "s/{{INFLUXDB_ORG}}/$INFLUXDB_ORG/g" -e "s/{{INFLUXDB_BUCKET}}/$INFLUXDB_BUCKET/g" )
+# Dashboards provisioning (namespace templated)
+KUBECONFIG="$KUBECONFIG_FILE" kubectl apply -f <(render_globals < "$DIR/grafana-provisioning-dashboards.yaml")
+
+# Dashboards content (namespace templated)
+KUBECONFIG="$KUBECONFIG_FILE" kubectl apply -f <(render_globals < "$DIR/grafana-dashboards.yaml")
+
 KUBECONFIG="$KUBECONFIG_FILE" kubectl apply -f <(render_globals < "$DIR/grafana-deployment.yaml"   | render_grafana)
 KUBECONFIG="$KUBECONFIG_FILE" kubectl apply -f <(render_globals < "$DIR/grafana-service.yaml")
 

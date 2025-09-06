@@ -13,6 +13,26 @@ spec:
       labels:
         app: grafana
     spec:
+      # Init container adjusts ownership of the data dir to the UID/GID used by the image
+      initContainers:
+        - name: fix-perms
+          image: {{GRAFANA_IMAGE}}
+          command: ["/bin/sh","-lc"]
+          args:
+            - >
+              uid=$(stat -c "%u" /usr/share/grafana 2>/dev/null || echo 0);
+              gid=$(stat -c "%g" /usr/share/grafana 2>/dev/null || echo 0);
+              echo "Adjusting ownership of /var/lib/grafana to ${uid}:${gid}";
+              chown -R "${uid}:${gid}" /var/lib/grafana || true;
+              chmod -R g+rwX /var/lib/grafana || true
+          securityContext:
+            runAsUser: 0
+            runAsGroup: 0
+            allowPrivilegeEscalation: false
+          volumeMounts:
+            - name: grafana-storage
+              mountPath: /var/lib/grafana
+
       containers:
         - name: grafana
           image: {{GRAFANA_IMAGE}}
@@ -39,6 +59,7 @@ spec:
               mountPath: /etc/grafana/provisioning/dashboards
             - name: grafana-dashboards
               mountPath: /var/lib/grafana/dashboards
+
       volumes:
         - name: grafana-storage
           persistentVolumeClaim:
@@ -52,5 +73,4 @@ spec:
         - name: grafana-dashboards
           configMap:
             name: grafana-dashboards
-
 

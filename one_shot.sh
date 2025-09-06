@@ -209,9 +209,6 @@ log "Provisioning Grafana dashboards"
 [[ -f "$STAGE03/grafana-provisioning-dashboards.yaml" ]] || die "Missing $STAGE03/grafana-provisioning-dashboards.yaml"
 [[ -f "$STAGE03/grafana-dashboards.yaml" ]] || die "Missing $STAGE03/grafana-dashboards.yaml"
 
-kubectl -n "${NAMESPACE}" apply -f "$STAGE03/grafana-provisioning-dashboards.yaml"
-kubectl -n "${NAMESPACE}" apply -f "$STAGE03/grafana-dashboards.yaml"
-
 log "Restarting Grafana to load dashboards"
 kubectl -n "${NAMESPACE}" rollout restart deploy/grafana
 kubectl -n "${NAMESPACE}" rollout status deploy/grafana --timeout=180s || true
