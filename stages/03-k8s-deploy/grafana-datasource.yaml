@@ -10,6 +10,7 @@ data:
     apiVersion: 1
     datasources:
       - name: InfluxDB
+        uid: influxdb
         type: influxdb
         access: proxy
         url: http://influxdb.{{NAMESPACE}}.svc.cluster.local:8086
@@ -19,5 +20,5 @@ data:
           organization: {{INFLUXDB_ORG}}
           defaultBucket: {{INFLUXDB_BUCKET}}
         secureJsonData:
-          token: {{INFLUXDB_ADMIN_PASSWORD}}
+          token: "$__env{INFLUXDB_TOKEN}"
 
