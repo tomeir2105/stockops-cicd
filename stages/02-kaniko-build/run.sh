@@ -1,49 +1,45 @@
-#!/usr/bin/env bash
+#!/bin/bash
 set -euo pipefail
 
-NAMESPACE="${NAMESPACE:-ci}"
-IMAGE="${IMAGE:-meir25/stockops-app:latest}"
+NS=ci
+YAML=./stages/02-kaniko-build/kaniko-build-fetcher.yaml
+DEST_IMAGE="${DEST_IMAGE:-meir25/stockops-fetcher:latest}"
 
-echo "[02-kaniko-build] Building image $IMAGE in namespace $NAMESPACE (using local context)"
+# derive HTTPS URL + branch from current repo
+origin=$(git config --get remote.origin.url)
+branch=$(git rev-parse --abbrev-ref HEAD)
 
-# Delete old job if exists
-kubectl -n "$NAMESPACE" delete job kaniko-build --ignore-not-found
+normalize() {
+  local o="$1"
+  if [[ "$o" =~ ^git@github\.com:(.+)\.git$ ]]; then
+    echo "https://github.com/${BASH_REMATCH[1]}.git"
+  elif [[ "$o" =~ ^git@github\.com:(.+)$ ]]; then
+    echo "https://github.com/${BASH_REMATCH[1]}"
+  elif [[ "$o" =~ ^https?:// ]]; then
+    echo "$o"
+  else
+    echo ""
+  fi
+}
+https_url=$(normalize "$origin"); [[ -n "$https_url" ]] || { echo "Bad origin: $origin"; exit 1; }
 
-# Create ConfigMap from local repo
-kubectl -n "$NAMESPACE" delete configmap stockops-src --ignore-not-found
-kubectl -n "$NAMESPACE" create configmap stockops-src --from-file=.
+# ensure namespace exists
+kubectl get ns "$NS" >/dev/null 2>&1 || kubectl create ns "$NS"
 
-# Kaniko job mounting the configmap
-kubectl -n "$NAMESPACE" apply -f - <<YAML
-apiVersion: batch/v1
-kind: Job
-metadata:
-  name: kaniko-build
-spec:
-  backoffLimit: 0
-  template:
-    spec:
-      restartPolicy: Never
-      containers:
-      - name: kaniko
-        image: gcr.io/kaniko-project/executor:latest
-        args:
-          - --dockerfile=/workspace/Dockerfile
-          - --context=/workspace
-          - --destination=$IMAGE
-        volumeMounts:
-          - name: context
-            mountPath: /workspace
-          - name: kaniko-secret
-            mountPath: /kaniko/.docker
-      volumes:
-        - name: context
-          configMap:
-            name: stockops-src
-        - name: kaniko-secret
-          secret:
-            secretName: regcred
-YAML
+# clean previous job
+kubectl -n "$NS" delete job kaniko-build-fetcher --ignore-not-found
 
-kubectl -n "$NAMESPACE" wait --for=condition=complete job/kaniko-build --timeout=600s
+# render placeholders -> temp file and apply
+tmp=$(mktemp)
+sed -e "s|__HTTPS_URL__|$https_url|g" \
+    -e "s|__BRANCH__|$branch|g" \
+    -e "s|__DEST_IMAGE__|$DEST_IMAGE|g" \
+    "$YAML" > "$tmp"
+
+kubectl apply -f "$tmp"
+rm -f "$tmp"
+
+# wait & show logs (best-effort)
+kubectl -n "$NS" wait --for=condition=complete job/kaniko-build-fetcher --timeout=900s || true
+kubectl -n "$NS" logs job/kaniko-build-fetcher --all-containers=true || true
 

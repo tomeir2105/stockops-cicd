@@ -13,6 +13,8 @@ spec:
       labels:
         app: {{FETCHER_APP_NAME}}
     spec:
+      imagePullSecrets:
+        - name: regcred
       containers:
         - name: {{FETCHER_APP_NAME}}
           image: {{FETCHER_IMAGE}}:{{FETCHER_TAG}}

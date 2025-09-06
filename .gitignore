@@ -1,31 +1,26 @@
-# dont commit secrets
+# 🔒 Secrets and kubeconfig
 k3s-jenkins.yaml
-
-# Ignore local environment files
 *.env
-*.env.*
+*.env.local
+*.yaml.secret
 
-# Ignore editor/OS files
-*.swp
-*.swo
-.DS_Store
-
-# Ignore build artifacts
+# 🗑️ Temporary / generated
+_cicd/
+tmp/
 *.log
 *.tmp
 *.bak
 
-# Python cache
+# ✏️ Editor / OS files
+*.swp
+*.swo
+.DS_Store
+
+# 🐍 Python cache
 __pycache__/
 *.pyc
 *.pyo
 
-# Node/npm
+# 📦 Node / npm
 node_modules/
-# 🔒 Secrets
-*.env
-*.env.*
-*.yaml.secret
-k3s-jenkins.yaml
 
-k3s-jenkins.yaml

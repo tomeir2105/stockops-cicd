@@ -13,6 +13,8 @@ spec:
       labels:
         app: {{NEWS_APP_NAME}}
     spec:
+      imagePullSecrets:
+        - name: regcred
       containers:
         - name: {{NEWS_APP_NAME}}
           image: {{NEWS_IMAGE}}:{{NEWS_TAG}}
