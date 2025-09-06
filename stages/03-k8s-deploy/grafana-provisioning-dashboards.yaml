@@ -9,7 +9,7 @@ data:
     providers:
       - name: stockops-dashboards
         type: file
-        disabled: false
+        disableDeletion: false
         allowUiUpdates: true
         updateIntervalSeconds: 30
         options:

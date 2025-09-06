@@ -11,6 +11,7 @@ need_vars=(NAMESPACE KUBECONFIG_FILE
   NEWS_APP_NAME NEWS_IMAGE NEWS_TAG NEWS_CONTAINER_PORT NEWS_REPLICAS)
 need_vars+=(INFLUXDB_IMAGE INFLUXDB_STORAGE_SIZE INFLUXDB_ADMIN_USER INFLUXDB_ADMIN_PASSWORD INFLUXDB_ORG INFLUXDB_BUCKET INFLUXDB_RETENTION)
 need_vars+=(GRAFANA_IMAGE GRAFANA_STORAGE_SIZE GRAFANA_ADMIN_USER GRAFANA_ADMIN_PASSWORD)
+need_vars+=(INFLUXDB_ADMIN_TOKEN)  # <-- ensure the admin API token is provided
 
 for v in "${need_vars[@]}"; do
   [[ -n "${!v:-}" ]] || { echo "Missing $v in .env"; exit 1; }
@@ -82,10 +83,10 @@ KUBECONFIG="$KUBECONFIG_FILE" kubectl apply -f <(render_globals < "$DIR/grafana-
   | sed -e "s/{{INFLUXDB_ORG}}/$INFLUXDB_ORG/g" -e "s/{{INFLUXDB_BUCKET}}/$INFLUXDB_BUCKET/g" )
 # Dashboards provisioning (namespace templated)
 KUBECONFIG="$KUBECONFIG_FILE" kubectl apply -f <(render_globals < "$DIR/grafana-provisioning-dashboards.yaml")
-
 # Dashboards content (namespace templated)
 KUBECONFIG="$KUBECONFIG_FILE" kubectl apply -f <(render_globals < "$DIR/grafana-dashboards.yaml")
 
+# Deployment & service last (after CMs exist)
 KUBECONFIG="$KUBECONFIG_FILE" kubectl apply -f <(render_globals < "$DIR/grafana-deployment.yaml"   | render_grafana)
 KUBECONFIG="$KUBECONFIG_FILE" kubectl apply -f <(render_globals < "$DIR/grafana-service.yaml")
 
