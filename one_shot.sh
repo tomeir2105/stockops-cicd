@@ -1,6 +1,28 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Structured logging
+LOG_FILE="${LOG_FILE:-one_shot_$(date +%Y%m%d_%H%M%S).log}"
+exec > >(tee -a "$LOG_FILE") 2>&1
+
+# nicer xtrace with timestamps (toggle with TRACE=1 ./one_shot.sh)
+if [[ "${TRACE:-0}" == "1" ]]; then
+  export PS4='+ [${EPOCHREALTIME}] ${BASH_SOURCE##*/}:${LINENO}: ${FUNCNAME[0]:-main} > '
+  set -x
+fi
+
+on_err() {
+  local exit_code=$?
+  echo "$(ts) ERROR: command failed at ${BASH_SOURCE##*/}:${BASH_LINENO[0]} — '${BASH_COMMAND}'"
+  echo "$(ts) Gathering last events/pods:"
+  kubectl -n "${NAMESPACE}" get pods -o wide || true
+  kubectl -n "${NAMESPACE}" get events --sort-by=.lastTimestamp | tail -n 60 || true
+  echo "$(ts) Log tail (grafana):"
+  kubectl -n "${NAMESPACE}" logs deploy/grafana --tail=120 || true
+  exit $exit_code
+}
+trap on_err ERR
+
 # ------------ Config ------------
 # Load local parameters if set_params.sh exists
 if [[ -f "$(dirname "$0")/secret_params.sh" ]]; then
@@ -51,6 +73,16 @@ need_bin kubectl
 need_bin ssh
 need_bin scp
 [[ -n "${DOCKERHUB_PAT}" ]] || die "Set DOCKERHUB_PAT env with your Docker Hub access token."
+log "Env snapshot (secrets masked)"
+echo "NAMESPACE=${NAMESPACE}"
+echo "K3S_IP=${K3S_IP}  K3S_HOST=${K3S_HOST}"
+echo "DOCKERHUB_USER=${DOCKERHUB_USER}"
+echo "DOCKERHUB_PAT=${DOCKERHUB_PAT:+***SET***}"
+echo "GRAFANA_ADMIN_USER=${GRAFANA_ADMIN_USER}  GRAFANA_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:+***SET***}"
+
+log "kubectl context"
+kubectl config current-context || true
+kubectl cluster-info || true
 
 # ------------ 0) Prep k3s VM ------------
 log "Ensuring k3s API binds on ${K3S_IP} and fetching kubeconfig"
