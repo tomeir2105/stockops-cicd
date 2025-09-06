@@ -47,7 +47,7 @@ spec:
               valueFrom:
                 secretKeyRef:
                   name: influxdb-auth
-                  key: DOCKER_INFLUXDB_INIT_PASSWORD
+                  key: DOCKER_INFLUXDB_INIT_ADMIN_TOKEN
             - name: GF_PATHS_PROVISIONING
               value: /etc/grafana/provisioning
           volumeMounts:

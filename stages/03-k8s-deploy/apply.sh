@@ -68,7 +68,8 @@ KUBECONFIG="$KUBECONFIG_FILE" kubectl apply -f <(render_globals < "$DIR/influxdb
         -e "s/{{INFLUXDB_ADMIN_PASSWORD}}/$INFLUXDB_ADMIN_PASSWORD/g" \
         -e "s/{{INFLUXDB_ORG}}/$INFLUXDB_ORG/g" \
         -e "s/{{INFLUXDB_BUCKET}}/$INFLUXDB_BUCKET/g" \
-        -e "s/{{INFLUXDB_RETENTION}}/$INFLUXDB_RETENTION/g" )
+        -e "s/{{INFLUXDB_RETENTION}}/$INFLUXDB_RETENTION/g" \
+        -e "s/{{INFLUXDB_ADMIN_TOKEN}}/$INFLUXDB_ADMIN_TOKEN/g" )
 KUBECONFIG="$KUBECONFIG_FILE" kubectl apply -f <(render_globals < "$DIR/influxdb-deployment.yaml"  | render_influx)
 KUBECONFIG="$KUBECONFIG_FILE" kubectl apply -f <(render_globals < "$DIR/influxdb-service.yaml")
 
