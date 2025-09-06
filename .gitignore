@@ -1,3 +1,6 @@
+# dont commit secrets
+k3s-jenkins.yaml
+
 # Ignore local environment files
 *.env
 *.env.*
@@ -25,3 +28,4 @@ node_modules/
 *.yaml.secret
 k3s-jenkins.yaml
 
+k3s-jenkins.yaml
