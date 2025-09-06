@@ -1,36 +1,41 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# ===============================
-# 03b-expose-grafana
-# Ensures Grafana is exposed via NodePort 32000
-# ===============================
+# 03b-expose-grafana: expose Grafana on NodePort 32000 and print URL.
 
 NAMESPACE="${NAMESPACE:-ci}"
 SVC_FILE="$(dirname "$0")/grafana-service.yaml"
 
-# Use first cluster server from kubeconfig (works even if no current-context)
-API_HOST=$(kubectl config view --raw -o jsonpath='{.clusters[*].cluster.server}' | sed -E 's#https?://([^:/]+).*#\1#; q')
+# Work even if no current-context is set; take the first cluster server:
+API_HOST="$(kubectl config view --raw -o jsonpath='{.clusters[*].cluster.server}' | sed -E 's#https?://([^:/]+).*#\1#; q')"
 
-# Avoid Jenkins proxy interfering with kubectl
+# Keep kubectl off any Jenkins proxy:
 unset http_proxy https_proxy HTTP_PROXY HTTPS_PROXY ALL_PROXY all_proxy
 export NO_PROXY="${API_HOST}"
 
-# Ensure correct namespace in the manifest (idempotent)
+# Ensure namespace in manifest matches target namespace (idempotent):
 if command -v gsed >/dev/null 2>&1; then SED=gsed; else SED=sed; fi
 $SED -i "s/namespace: .*/namespace: ${NAMESPACE}/" "${SVC_FILE}"
 
-echo "[03b-expose-grafana] Applying NodePort service (selector app=grafana, nodePort=32000)…"
+echo "[03b] Applying Grafana NodePort service (port 3000 -> nodePort 32000)…"
 kubectl apply --validate=false -f "${SVC_FILE}"
 
-# Show status & endpoints (helps detect selector mismatch)
-kubectl -n "${NAMESPACE}" get svc grafana-nodeport -o wide
-kubectl -n "${NAMESPACE}" get endpoints grafana-nodeport -o yaml | sed -n '1,80p' || true
+# Wait until there is at least one endpoint (selector matches a Ready pod)
+echo "[03b] Waiting for Grafana endpoints…"
+for i in {1..30}; do
+  if kubectl -n "${NAMESPACE}" get endpoints grafana-nodeport -o json \
+      | jq -e '.subsets | length > 0' >/dev/null 2>&1; then
+    break
+  fi
+  sleep 2
+done
 
-# Print access URL (defaults to API host, override via ACCESS_IP if you want)
+echo
+kubectl -n "${NAMESPACE}" get svc grafana-nodeport -o wide || true
+kubectl -n "${NAMESPACE}" get endpoints grafana-nodeport -o yaml | sed -n '1,80p' || true
+echo
+
 ACCESS_IP="${ACCESS_IP:-${API_HOST}}"
-echo
-echo "[03b-expose-grafana] Access Grafana at:"
+echo "[03b] Access Grafana at:"
 echo "  -> http://${ACCESS_IP}:32000"
-echo
 
