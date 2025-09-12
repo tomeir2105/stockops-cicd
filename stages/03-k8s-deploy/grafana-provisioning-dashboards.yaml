@@ -10,9 +10,9 @@ data:
       - name: stockops-dashboards
         type: file
         disableDeletion: false
-        allowUiUpdates: true
+        allowUiUpdates: false
         updateIntervalSeconds: 30
         options:
-          path: /var/lib/grafana/dashboards
+          path: /etc/grafana/dashboards
           foldersFromFilesStructure: true
 

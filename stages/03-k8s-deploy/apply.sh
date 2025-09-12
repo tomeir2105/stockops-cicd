@@ -1,20 +1,32 @@
 #!/usr/bin/env bash
 set -euo pipefail
-DIR="$(cd "$(dirname "$0")" && pwd)"
+
+# Always run relative to this script's directory
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$DIR"
+
+# Load env from this folder
 ENV_FILE="$DIR/.env"
 [[ -f "$ENV_FILE" ]] || { echo "Missing $ENV_FILE (copy .env.example to .env)"; exit 1; }
 # shellcheck disable=SC1090
 source "$ENV_FILE"
 
-need_vars=(NAMESPACE KUBECONFIG_FILE
-  FETCHER_APP_NAME FETCHER_IMAGE FETCHER_TAG FETCHER_CONTAINER_PORT FETCHER_REPLICAS
-  NEWS_APP_NAME NEWS_IMAGE NEWS_TAG NEWS_CONTAINER_PORT NEWS_REPLICAS)
-need_vars+=(INFLUXDB_IMAGE INFLUXDB_STORAGE_SIZE INFLUXDB_ADMIN_USER INFLUXDB_ADMIN_PASSWORD INFLUXDB_ORG INFLUXDB_BUCKET INFLUXDB_RETENTION)
-need_vars+=(GRAFANA_IMAGE GRAFANA_STORAGE_SIZE GRAFANA_ADMIN_USER GRAFANA_ADMIN_PASSWORD)
-need_vars+=(INFLUXDB_ADMIN_TOKEN)  # <-- ensure the admin API token is provided
+# Use the kubeconfig from .env for all kubectl commands
+export KUBECONFIG="${KUBECONFIG_FILE}"
 
+# Safety: remove any old Grafana service in default namespace that blocks NodePort 32000
+kubectl -n default delete svc grafana --ignore-not-found
+
+# Required variables (fail fast if any are missing/empty)
+need_vars=( NAMESPACE KUBECONFIG_FILE
+  FETCHER_APP_NAME FETCHER_IMAGE FETCHER_TAG FETCHER_CONTAINER_PORT FETCHER_REPLICAS
+  NEWS_APP_NAME NEWS_IMAGE NEWS_TAG NEWS_CONTAINER_PORT NEWS_REPLICAS
+  INFLUXDB_IMAGE INFLUXDB_STORAGE_SIZE INFLUXDB_ADMIN_USER INFLUXDB_ADMIN_PASSWORD INFLUXDB_ORG INFLUXDB_BUCKET INFLUXDB_RETENTION
+  GRAFANA_IMAGE GRAFANA_STORAGE_SIZE GRAFANA_ADMIN_USER GRAFANA_ADMIN_PASSWORD
+  INFLUXDB_ADMIN_TOKEN
+)
 for v in "${need_vars[@]}"; do
-  [[ -n "${!v:-}" ]] || { echo "Missing $v in .env"; exit 1; }
+  [[ -n "${!v:-}" ]] || { echo "Missing required var in .env: $v"; exit 1; }
 done
 
 render_globals() {
@@ -89,6 +101,18 @@ KUBECONFIG="$KUBECONFIG_FILE" kubectl apply -f <(render_globals < "$DIR/grafana-
 # Deployment & service last (after CMs exist)
 KUBECONFIG="$KUBECONFIG_FILE" kubectl apply -f <(render_globals < "$DIR/grafana-deployment.yaml"   | render_grafana)
 KUBECONFIG="$KUBECONFIG_FILE" kubectl apply -f <(render_globals < "$DIR/grafana-service.yaml")
+
+# --- Force Grafana to re-provision dashboards/datasources each run ---
+kubectl -n "$NAMESPACE" rollout restart deploy/grafana
+kubectl -n "$NAMESPACE" rollout status  deploy/grafana --timeout=180s || true
+
+# --- Friendly status ---
+echo "Grafana should be reachable at: http://${K3S_NODE_IP:-192.168.56.102}:32000"
+kubectl -n "$NAMESPACE" get svc grafana
+# Ensure fetcher has TICKERS env
+if [[ -n "${TICKERS:-}" ]]; then
+  kubectl -n "$NAMESPACE" set env deploy/stockops-fetcher TICKERS="${TICKERS}" || true
+fi
 
 echo "Applied deployments & services for fetcher and news in $NAMESPACE."
 

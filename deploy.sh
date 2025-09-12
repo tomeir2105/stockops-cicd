@@ -1,0 +1,1 @@
+/home/user/stockops-cicd/stages/03-k8s-deploy/apply.sh

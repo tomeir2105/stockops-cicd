@@ -58,7 +58,7 @@ spec:
             - name: grafana-provisioning-dashboards
               mountPath: /etc/grafana/provisioning/dashboards
             - name: grafana-dashboards
-              mountPath: /var/lib/grafana/dashboards
+              mountPath: /etc/grafana/dashboards
 
       volumes:
         - name: grafana-storage
