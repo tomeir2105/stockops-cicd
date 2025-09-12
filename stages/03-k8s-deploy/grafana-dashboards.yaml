@@ -18,7 +18,7 @@ data:
           "targets": [
             {
               "refId": "A",
-              "query": "from(bucket: \"metricks\") |> range(start: -24h) |> filter(fn: (r) => r._measurement == \"price\") |> filter(fn: (r) => r.ticker =~ /^(${ticker:regex})$/)"
+              "query": "from(bucket: \"metricks\") |> range(start: -24h) |> filter(fn: (r) => r._measurement == \"lse_prices\") |> filter(fn: (r) => r.ticker =~ /^(${ticker:regex})$/)"
             }
           ],
           "fieldConfig": { "defaults": {}, "overrides": [] },
@@ -63,7 +63,8 @@ data:
           "targets": [
             {
               "refId": "A",
-              "query": "from(bucket: \"metricks\") |> range(start: -7d) |> filter(fn: (r) => r._measurement == \"news\") |> filter(fn: (r) => r.ticker =~ /^(${ticker:regex})$/) |> keep(columns: [\"_time\",\"title\",\"ticker\",\"source\"])"
+              "query": "from(bucket: \\\"metricks\\\") |> range(start: -7d) |> filter(fn: (r) => r._measurement == \\\"news\\\") |> filter(fn: (r) => r.ticker =~ /^(${ticker:regex})$/) |> keep(columns: [\\\"_time\\\",\\\"_field\\\",\\\"_value\\\",\\\"ticker\\\",\\\"source\\\",\\\"title\\\"])"
+
             }
           ],
           "fieldConfig": { "defaults": {}, "overrides": [] },
