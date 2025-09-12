@@ -1,9 +1,20 @@
 apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: grafana-dashboards
-  namespace: {{NAMESPACE}}
 data:
+  stockops-news.json: '{"annotations": {"list": []},"editable": true,"fiscalYearStartMonth":
+    1,"graphTooltip": 0,"panels": [{"type": "table","title": "News","datasource":
+    {"type": "influxdb","uid": "influxdb"},"targets": [{"refId": "A","query": "from(bucket:
+    \"metricks\") |> range(start: -7d) |> filter(fn: (r) => r._measurement =~ /^(news|lse_news)$/)
+    |> filter(fn: (r) => r._field == \"title\") |> filter(fn: (r) => r.ticker =~ /^(${ticker:regex})$/)
+    |> map(fn: (r) => ({ r with Title: r._value, Source: r.source, Ticker: r.ticker
+    })) |> keep(columns: [\"_time\",\"Ticker\",\"Source\",\"Title\"]) |> sort(columns:
+    [\"_time\"], desc: true) |> limit(n: 500)"}],"fieldConfig": {"defaults": {},"overrides":
+    []},"options": {"showHeader": true,"pageSize": 100,"showFooter": false},"gridPos":
+    {"h": 12,"w": 24,"x": 0,"y": 0},"transformations": []}],"schemaVersion": 38,"tags":
+    ["stockops"],"templating": {"list": [{"type": "query","name": "ticker","label":
+    "Ticker","hide": 0,"multi": true,"includeAll": true,"allValue": ".*","datasource":
+    {"type": "influxdb","uid": "influxdb"},"query": "import \"influxdata/influxdb/schema\"\nschema.tagValues(bucket:
+    \"metricks\", tag: \"ticker\")"}]},"time": {"from": "now-7d","to": "now"},"timepicker":
+    {},"title": "StockOps \u2022 News","uid": "stockops-news","version": 1}'
   stockops-prices.json: |
     {
       "annotations": { "list": [] },
@@ -49,50 +60,8 @@ data:
       "uid": "stockops-prices",
       "version": 1
     }
-  stockops-news.json: |
-    {
-      "annotations": { "list": [] },
-      "editable": true,
-      "fiscalYearStartMonth": 1,
-      "graphTooltip": 0,
-      "panels": [
-        {
-          "type": "table",
-          "title": "News",
-          "datasource": { "type": "influxdb", "uid": "influxdb" },
-          "targets": [
-            {
-              "refId": "A",
-              "query": "from(bucket: \\\"metricks\\\") |> range(start: -7d) |> filter(fn: (r) => r._measurement == \\\"news\\\") |> filter(fn: (r) => r.ticker =~ /^(${ticker:regex})$/) |> keep(columns: [\\\"_time\\\",\\\"_field\\\",\\\"_value\\\",\\\"ticker\\\",\\\"source\\\",\\\"title\\\"])"
-
-            }
-          ],
-          "fieldConfig": { "defaults": {}, "overrides": [] },
-          "options": {},
-          "gridPos": { "h": 12, "w": 24, "x": 0, "y": 0 }
-        }
-      ],
-      "schemaVersion": 38,
-      "tags": ["stockops"],
-      "templating": {
-        "list": [
-          {
-            "type": "query",
-            "name": "ticker",
-            "label": "Ticker",
-            "hide": 0,
-            "multi": true,
-            "includeAll": true,
-            "allValue": ".*",
-            "datasource": { "type": "influxdb", "uid": "influxdb" },
-            "query": "import \"influxdata/influxdb/schema\"\nschema.tagValues(bucket: \"metricks\", tag: \"ticker\")"
-          }
-        ]
-      },
-      "time": { "from": "now-7d", "to": "now" },
-      "timepicker": {},
-      "title": "StockOps • News",
-      "uid": "stockops-news",
-      "version": 1
-    }
-
+kind: ConfigMap
+metadata:
+  creationTimestamp: null
+  name: grafana-dashboards
+  namespace: ci
