@@ -16,7 +16,6 @@ spec:
       imagePullSecrets:
         - name: regcred
 
-      # Runtime .env so the app’s hot-reload picks it up
       volumes:
         - name: dotenv
           emptyDir: {}
@@ -24,20 +23,26 @@ spec:
       initContainers:
         - name: write-dotenv
           image: busybox:1.36
+          env:
+            - name: INFLUXDB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: influxdb-auth
+                  key: DOCKER_INFLUXDB_INIT_ADMIN_TOKEN
           command: ["/bin/sh","-c"]
           args:
             - |
               cat > /work/.env <<EOT
-              # canonical keys
               INFLUXDB_URL=${INFLUXDB_URL}
               INFLUXDB_ORG=${INFLUXDB_ORG}
               INFLUXDB_BUCKET=${INFLUXDB_BUCKET}
-              INFLUXDB_TOKEN=${INFLUXDB_ADMIN_TOKEN}
+              INFLUXDB_TOKEN=$INFLUXDB_TOKEN
               TICKERS=${TICKERS}
-              # aliases some app builds expect
-              ORG=${INFLUXDB_ORG}
-              BUCKET=${INFLUXDB_BUCKET}
-              TOKEN=${INFLUXDB_ADMIN_TOKEN}
+              # lowercase keys (fallbacks some builds read)
+              org=${INFLUXDB_ORG}
+              bucket=${INFLUXDB_BUCKET}
+              token=$INFLUXDB_TOKEN
+              tickers=${TICKERS}
               EOT
           volumeMounts:
             - name: dotenv
@@ -53,18 +58,8 @@ spec:
             - name: dotenv
               mountPath: /app/.env
               subPath: .env
-
-          # (Optional) also expose via env vars; harmless if app prefers /app/.env
           env:
-            - name: ORG
-              value: "${INFLUXDB_ORG}"
-            - name: BUCKET
-              value: "${INFLUXDB_BUCKET}"
-            - name: TOKEN
-              valueFrom:
-                secretKeyRef:
-                  name: influxdb-auth
-                  key: DOCKER_INFLUXDB_INIT_ADMIN_TOKEN
+            # canonical
             - name: INFLUXDB_URL
               value: "${INFLUXDB_URL}"
             - name: INFLUXDB_ORG
@@ -77,5 +72,17 @@ spec:
                   name: influxdb-auth
                   key: DOCKER_INFLUXDB_INIT_ADMIN_TOKEN
             - name: TICKERS
+              value: "${TICKERS}"
+            # lowercase (alternate code paths)
+            - name: org
+              value: "${INFLUXDB_ORG}"
+            - name: bucket
+              value: "${INFLUXDB_BUCKET}"
+            - name: token
+              valueFrom:
+                secretKeyRef:
+                  name: influxdb-auth
+                  key: DOCKER_INFLUXDB_INIT_ADMIN_TOKEN
+            - name: tickers
               value: "${TICKERS}"
 
