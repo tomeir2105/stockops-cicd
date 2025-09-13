@@ -1,0 +1,72 @@
+# Change this filename to .env and add the missing credentials
+# ==== Cluster / access ====
+K3S_HOST="user@192.168.56.102"     # ssh user@k3s-ip
+K3S_SSH_PORT=22
+K3S_SUDO_PASS="user"            # sudo password on the k3s VM
+KUBECONFIG="/home/user/k3s-jenkins.yaml"
+
+# ==== Images & Tags ====
+FETCHER_IMAGE="docker.io/meir25/stockops-fetcher"
+FETCHER_TAG="latest"
+NEWS_IMAGE="docker.io/meir25/stockops-news"
+NEWS_TAG="latest"
+GRAFANA_IMAGE="grafana/grafana:11.3.0"
+INFLUXDB_IMAGE="influxdb:2.7"
+
+# ==== Namespace & Names ====
+NAMESPACE="ci"
+APP_NAME="stockops"
+FETCHER_APP_NAME="stockops-fetcher"
+NEWS_APP_NAME="stockops-news"
+
+# ==== Docker Hub (push + imagePull) ====
+DOCKERHUB_USERNAME=""
+DOCKERHUB_PAT=""
+DOCKERHUB_EMAIL=""
+
+# ==== GitHub (only if cloning private repos in-build) ====
+GITHUB_USERNAME=""
+GITHUB_PAT=""
+
+# ==== App config ====
+TICKERS="HSBA.L,BP.L,VOD.L,GLEN.L,TSCO.L"
+
+# ==== InfluxDB v2 bootstrap ====
+DOCKER_INFLUXDB_INIT_USERNAME="admin"
+DOCKER_INFLUXDB_INIT_PASSWORD="admin123"
+DOCKER_INFLUXDB_INIT_ORG="stockops"
+DOCKER_INFLUXDB_INIT_BUCKET="prices"
+DOCKER_INFLUXDB_INIT_RETENTION="30d"                 # 0=infinite, or "30d" etc.
+DOCKER_INFLUXDB_INIT_ADMIN_TOKEN="jQhRmXvLaPtZyNcWbFsKdGeTuVoHxYnC"
+
+# Use ONE token everywhere (Grafana + fetcher + news):
+INFLUXDB_TOKEN="fWqzNtpVhLmRyXkJgBaCsDeTrUvZoQyM"
+INFLUXDB_ADMIN_TOKEN="fWqzNtpVhLmRyXkJgBaCsDeTrUvZoQyM"
+INFLUXDB_URL="http://influxdb:8086"  # in-cluster service
+INFLUXDB_ORG="stockops"
+INFLUXDB_BUCKET="metricks"            # match your current secret value exactly
+INFLUXDB_RETENTION="30d"
+INFLUXDB_ADMIN_USER="admin"
+INFLUXDB_ADMIN_PASSWORD="admin123"
+
+# ==== Grafana admin ====
+GRAFANA_ADMIN_USER="admin"
+GRAFANA_ADMIN_PASSWORD="ChangeMe"
+GRAFANA_STORAGE_SIZE="5Gi"     # must not be 0
+
+# ==== Optional knobs ====
+
+# ==== Ports & Replicas ====
+FETCHER_CONTAINER_PORT=80
+FETCHER_REPLICAS=1
+NEWS_CONTAINER_PORT=80
+NEWS_REPLICAS=1
+CONTAINER_PORT=80
+REPLICAS=1
+
+IMAGE="docker.io/meir25/stockops-fetcher"
+TAG="latest"
+INFLUXDB_STORAGE_SIZE="5Gi"
+EXTERNAL_NODE_IP="192.168.56.102"
+GRAFANA_NODEPORT="32000"
+START_GRAFANA_PORT_FORWARD=0
