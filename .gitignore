@@ -25,3 +25,4 @@ __pycache__/
 # 📦 Node / npm
 node_modules/
 
+stages/03-k8s-deploy/.env
