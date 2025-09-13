@@ -26,3 +26,5 @@ __pycache__/
 node_modules/
 
 stages/03-k8s-deploy/.env
+stages/03-k8s-deploy/influxdb-secret.yaml
+stages/03-k8s-deploy/influxdb-secret.yaml.example
