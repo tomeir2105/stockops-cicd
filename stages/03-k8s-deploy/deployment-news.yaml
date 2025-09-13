@@ -36,12 +36,12 @@ spec:
               INFLUXDB_URL=${INFLUXDB_URL}
               INFLUXDB_ORG=${INFLUXDB_ORG}
               INFLUXDB_BUCKET=${INFLUXDB_BUCKET}
-              INFLUXDB_TOKEN=${INFLUXDB_ADMIN_TOKEN}
+              INFLUXDB_TOKEN=$INFLUXDB_TOKEN
               TICKERS=${TICKERS}
               # lowercase keys (some builds read these)
               org=${INFLUXDB_ORG}
               bucket=${INFLUXDB_BUCKET}
-              token=${INFLUXDB_ADMIN_TOKEN}
+              token=$INFLUXDB_TOKEN
               tickers=${TICKERS}
               EOT
           volumeMounts:
