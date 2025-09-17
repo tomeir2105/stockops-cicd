@@ -1,77 +1,50 @@
-# StockOps CI/CD on k3s
+# StockOps CI/CD (Direct Deploy on k3s)
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)  
-[![Kubernetes](https://img.shields.io/badge/Kubernetes-k3s-blue)](https://k3s.io/)  
-[![Docker Hub](https://img.shields.io/badge/Docker%20Hub-meir25-blue)](https://hub.docker.com)  
+**Repo:** `tomeir2105/stockops-cicd`  
+**Goal:** Build/push your StockOps images locally and **deploy directly** to a k3s cluster using shell scripts and Kubernetes manifests (no Kaniko).
 
 ---
 
 ## Table of Contents
-
-- [Overview](#overview)  
-- [Architecture](#architecture)  
-- [Components](#components)  
-- [Repository Structure](#repository-structure)  
-- [Prerequisites](#prerequisites)  
-- [Minimum Requirements](#minimum-requirements)  
-- [Installation](#installation)  
-- [Environment Variables](#environment-variables)  
-- [Usage](#usage)  
-- [Accessing Services](#accessing-services)  
-- [Development Workflow](#development-workflow)  
-- [Troubleshooting](#troubleshooting)  
-- [Tips & Notes](#tips--notes)  
-- [License](#license)  
-- [Author](#author)  
+- [Overview](#overview)
+- [Architecture](#architecture)
+- [Repository Structure](#repository-structure)
+- [Minimum Requirements](#minimum-requirements)
+- [Where to Run](#where-to-run)
+- [Installation](#installation)
+- [Environment Variables](#environment-variables)
+- [Usage](#usage)
+- [Accessing Services](#accessing-services)
+- [Troubleshooting](#troubleshooting)
+- [Notes](#notes)
 
 ---
 
 ## Overview
 
-**StockOps CI/CD** is a DevOps practice project for deploying and managing stock monitoring services on a local Kubernetes cluster powered by **k3s**.  
+This repository contains the **CI/CD glue** for the StockOps project. It assumes you build Docker images **locally** (or in your own pipeline) and deploy to a **k3s** cluster using `kubectl` and the manifests under `stages/03-k8s-deploy/`.
 
-The project demonstrates how to:  
-- Build Docker images for services using **Kaniko**  
-- Push images to **Docker Hub** automatically  
-- Deploy microservices (stock fetcher, news fetcher, InfluxDB, Grafana) to Kubernetes  
-- Configure secrets, namespaces, and registry access  
-- Expose **Grafana** dashboards externally  
+Typical flow:
+1. Build images locally (e.g., `meir25/stockops-fetcher`, `meir25/stockops-news`) and push to Docker Hub.
+2. Run `deploy.sh` (or `one_shot.sh`) from a control machine that has `kubectl` access to your k3s cluster.
+3. Access **Grafana** via NodePort to view dashboards.
+
+> Examples below use `192.168.56.102` as the k3s node IP and `ci` as the namespace. Adjust to your setup.
 
 ---
 
 ## Architecture
 
 ```
-GitHub (repo: tomeir2105/stockops-cicd)
+Local dev / CI (build + push Docker images)
         │
-        ├── one_shot.sh (main entrypoint)
-        │
-        ▼
-Docker Hub (images: meir25/stockops-*)
-        │
-        ▼
-k3s cluster (e.g. VM with IP 192.168.56.102)
-  ├── Namespace: ci
-  ├── Deployments:
-  │     • stockops-fetcher
-  │     • stockops-news
-  │     • influxdb
-  │     • grafana
-  └── Services:
-        • Grafana exposed on NodePort (default: 32000)
+        └──> Docker Hub (e.g., meir25/* images)
+                  │
+                  └──> k3s cluster (e.g., 192.168.56.102)
+                          ├─ Namespace: ci
+                          ├─ Deployments: stockops-fetcher, stockops-news, influxdb, grafana
+                          └─ Services: Grafana exposed via NodePort 32000
 ```
-
----
-
-## Components
-
-| Component   | Description |
-|--------------|-------------|
-| **k3s cluster** | Lightweight Kubernetes, used here on a VM. |
-| **StockOps Fetcher** | Fetches stock prices from external APIs. |
-| **StockOps News** | Collects related company news. |
-| **InfluxDB** | Time-series database storing stock data. |
-| **Grafana** | Visualization dashboards for stock metrics. |
 
 ---
 
@@ -79,193 +52,185 @@ k3s cluster (e.g. VM with IP 192.168.56.102)
 
 ```
 .
-├── Dockerfile                  # Base image template
-├── Jenkinsfile                 # For Jenkins integration
-├── one_shot.sh                 # Full pipeline orchestration
-├── setup_env.sh                # Environment variable helper
-├── stabilize-ci.sh             # Cleanup/recovery script
-├── sync_images.sh              # Image sync helper
-├── stages/                     # Individual stages of deployment
-│     ├── 00-bind-k3s-ip-remote
-│     ├── 01-namespace-and-registry-secret
-│     ├── 02-kaniko-build
-│     ├── 02b-kaniko-build-news
-│     ├── 03-k8s-deploy
-│     └── 03b-expose-grafana
-├── env                         # Local env files (gitignored)
-└── README.md                   # Documentation
+├── .gitignore
+├── .pf-grafana.pid           # (optional/ephemeral) created by port-forward helper
+├── Dockerfile                # Base Dockerfile (not Kaniko)
+├── README.md                 # This file (recommended replacement)
+├── deploy.sh                 # Main direct-deploy script to the cluster
+├── env                       # Example env file or placeholder (do not commit secrets)
+├── one_shot.sh               # All-in-one helper (reset + deploy); uses direct apply
+├── stabilize-ci.sh           # Namespace cleanup/stabilization
+├── sync_images.sh            # Optional helper to sync/push images
+└── stages/
+    └── 03-k8s-deploy/        # Kubernetes manifests (deployments, services, secrets templates, dashboards)
 ```
 
----
-
-## Prerequisites
-
-- Linux environment (Ubuntu 22.04+ recommended)  
-- k3s installed on a VM or host (tested with k3s v1.33.x)  
-- `kubectl` installed and configured  
-- Docker Hub account with PAT (Personal Access Token)  
-- SSH access to the VM hosting k3s  
+> The **only active stage** is `03-k8s-deploy/`. Older Kaniko stages were removed from the flow.
 
 ---
 
 ## Minimum Requirements
 
-- **Host Machine (for running Jenkins or scripts):**  
-  - CPU: 2+ cores  
-  - RAM: 4 GB+  
-  - Disk: 20 GB free  
-  - Tools: bash, ssh, kubectl, git  
+**Control Host (where you run the scripts):**
+- Linux (Ubuntu 22.04+ recommended)
+- CPU: 2+ cores
+- RAM: 4 GB+
+- Disk: 10 GB free
+- Tools: `bash`, `git`, `kubectl`, `ssh`, `docker` (for local builds)
 
-- **k3s Cluster Node(s):**  
-  - CPU: 2+ cores  
-  - RAM: 4 GB+ (8 GB recommended if running Grafana + InfluxDB)  
-  - Disk: 20 GB free  
-  - Network: Accessible via SSH from host  
-  - OS: Ubuntu 22.04/24.04 (tested)  
+**k3s Cluster Node(s):**
+- Linux (Ubuntu 22.04/24.04 tested)
+- CPU: 2+ cores
+- RAM: 4 GB+ (8 GB recommended when running InfluxDB + Grafana)
+- Disk: 20 GB free
+- Network: reachable from the control host
+
+---
+
+## Where to Run
+
+Run `deploy.sh` / `one_shot.sh` on **any machine with kubectl access** to your k3s cluster (for example, your Jenkins VM or a laptop that can reach `192.168.56.102`). The scripts expect that your kubeconfig is available (`$KUBECONFIG` or a file path you provide).
 
 ---
 
 ## Installation
 
-1. **Clone the repository**  
+1) **Clone**
 
 ```bash
 git clone https://github.com/tomeir2105/stockops-cicd.git
 cd stockops-cicd
 ```
 
-2. **Configure environment variables**  
-Create or edit your `.env` file or export variables manually (see [Environment Variables](#environment-variables)).  
+2) **Prepare kubeconfig**
 
-3. **Verify cluster access**  
+- Ensure you have a kubeconfig that can access the cluster (e.g., `k3s-jenkins.yaml`) and either:
+  - export it via `export KUBECONFIG=/path/to/k3s-jenkins.yaml`, **or**
+  - pass it inside the scripts if they accept a flag/path.
+
+3) **Configure environment**
+
+- Create a local `.env` (not committed) or export variables in your shell (see below).
+
+4) **(Optional) Build & push images locally**
 
 ```bash
-kubectl --kubeconfig ./k3s-jenkins.yaml get nodes
+# Example only – your app repos may live elsewhere
+docker build -t meir25/stockops-fetcher:latest ./path/to/fetcher
+docker push meir25/stockops-fetcher:latest
+
+docker build -t meir25/stockops-news:latest ./path/to/news
+docker push meir25/stockops-news:latest
 ```
 
-4. **Run one-shot installer**  
+5) **Run deployment**
 
 ```bash
-bash one_shot.sh
-```
+# Fast path: apply current manifests
+./deploy.sh
 
-This will:  
-- Reset the `ci` namespace  
-- Configure secrets for Docker Hub access  
-- Build and push images to Docker Hub  
-- Deploy all components (fetcher, news, influxdb, grafana)  
-- Expose Grafana at port 32000  
+# Or full reset + deploy
+./one_shot.sh
+```
 
 ---
 
 ## Environment Variables
 
-Required:
+At minimum, set:
 
 ```bash
-export K3S_HOST="user@192.168.56.102"   # Replace with your k3s host IP
-export K3S_SUDO_PASS="yourpassword"     # SSH password for sudo if needed
-export DOCKERHUB_PAT="your_dockerhub_pat"
+# Docker Hub (for private pulls or scripted pushes)
+export DOCKERHUB_USER="meir25"
+export DOCKERHUB_PAT="<dockerhub_access_token>"
+
+# k3s access (if your scripts need SSH for helper steps)
+export K3S_HOST="user@192.168.56.102"      # adjust to your host
+export K3S_SUDO_PASS="<sudo_password>"     # only if used by your scripts
+
+# Cluster basics
+export K3S_IP="192.168.56.102"
+export NAMESPACE="ci"
+
+# Kubeconfig
+export KUBECONFIG="/path/to/k3s-jenkins.yaml"
 ```
 
-Optional (can be templated in secrets):
-
+**Service secrets (examples):**
 ```bash
+# Grafana
 export GRAFANA_ADMIN_USER="admin"
 export GRAFANA_ADMIN_PASSWORD="changeme"
+
+# InfluxDB
 export INFLUXDB_ADMIN_USER="influxadmin"
 export INFLUXDB_ADMIN_PASSWORD="changeme"
+export INFLUXDB_ORG="stockops"
+export INFLUXDB_BUCKET="stocks"
+export INFLUXDB_RETENTION="30d"
 ```
+
+> Secrets are typically injected via templates under `stages/03-k8s-deploy/`. **Do not commit real secrets.**
 
 ---
 
 ## Usage
 
-Run the deployment:
-
+**Deploy (or re-deploy) everything:**
 ```bash
-bash one_shot.sh
+./deploy.sh
 ```
 
-Check deployments:
-
+**Full refresh (clean namespace, re-apply everything):**
 ```bash
-kubectl -n ci get pods
+./one_shot.sh
+```
+
+**Check cluster state:**
+```bash
+kubectl -n ci get pods -o wide
 kubectl -n ci get svc
+kubectl -n ci get deploy,sts,ds,jobs -o wide
 ```
 
-Clean and reset:
-
+**View logs:**
 ```bash
-bash stabilize-ci.sh
+kubectl -n ci logs deploy/stockops-fetcher
+kubectl -n ci logs deploy/stockops-news
+kubectl -n ci logs deploy/influxdb
+kubectl -n ci logs deploy/grafana
 ```
 
-Deploy individual stages (for testing):
-
+**Update app image tag (example):**
 ```bash
-bash stages/02-kaniko-build/run.sh
-bash stages/03-k8s-deploy/run.sh
+# If manifests use an image tag variable, update and re-apply.
+kubectl -n ci set image deploy/stockops-fetcher stockops-fetcher=meir25/stockops-fetcher:latest
+kubectl -n ci rollout status deploy/stockops-fetcher
 ```
 
 ---
 
 ## Accessing Services
 
-- **Grafana**:  
-  URL: `http://<k3s-ip>:32000`  
-  Default credentials: as defined in `grafana-secret.tmpl.yaml`  
+- **Grafana** (NodePort):  
+  `http://<K3S_IP>:32000` → for example: `http://192.168.56.102:32000`  
+  Credentials come from your Grafana secret/template.
 
-- **InfluxDB**:  
-  Accessible internally in the cluster (port 8086).  
-  Credentials from `influxdb-secret.yaml`.  
-
-- **Logs**:  
-
-```bash
-kubectl -n ci logs deploy/stockops-fetcher
-kubectl -n ci logs deploy/stockops-news
-```
-
----
-
-## Development Workflow
-
-1. Modify service code (fetcher/news).  
-2. Commit & push to GitHub.  
-3. Run `one_shot.sh` to rebuild + redeploy.  
-4. Verify changes in Grafana dashboard.  
+- **InfluxDB**: internal Service (default `:8086`) for the fetcher/news deployments.
 
 ---
 
 ## Troubleshooting
 
-- **Pods stuck in Pending**: Not enough cluster resources → increase VM RAM/CPU.  
-- **ImagePullBackOff**: Check Docker Hub credentials, PAT, or rate limits.  
-- **Grafana not accessible**: Ensure NodePort `32000` is open in VM firewall.  
-- **kubectl not working**: Verify `k3s-jenkins.yaml` is synced from k3s master.  
+- **ImagePullBackOff** → ensure images exist and are public (or use a pull secret). Verify the tags your manifests reference (`latest` vs a pinned tag).
+- **Pods Pending** → increase k3s VM CPU/RAM or free resources.
+- **Grafana not reachable** → confirm NodePort `32000` is open and you’re using the right `K3S_IP`.
+- **kubectl errors** → confirm kubeconfig path and that your context points to the k3s cluster.
 
 ---
 
-## Tips & Notes
+## Notes
 
-- Keep `.env` and secrets outside Git to avoid leaks.  
-- For repeated runs, use `stabilize-ci.sh` before `one_shot.sh`.  
-- Use NodePort 32000 → access Grafana externally.  
-- Jenkins pipeline integration can automate running `one_shot.sh` after commits.  
-
----
-
-## License
-
-This project is provided “as-is” for educational / practice / non-commercial use by Meir.  
-(Check `LICENSE` for the full terms.)
-
----
-
-## Author
-
-Maintained by **Meir**  
-GitHub: [tomeir2105](https://github.com/tomeir2105)  
-Docker Hub: [meir25](https://hub.docker.com/u/meir25)  
-
----
+- This repo focuses on **direct `kubectl apply`** deployment and scripts.  
+- Keep `.env`, kubeconfigs, and secret values **out of Git**.  
+- Dashboards and datasources are configured via ConfigMaps/Secret templates under `stages/03-k8s-deploy/`.
